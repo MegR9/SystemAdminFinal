@@ -1,0 +1,71 @@
+services:
+
+  #image used
+  wordpress:
+    image: wordpress:latest
+    restart: always
+#    expose:
+#      - "80"
+    deploy:
+      mode: replicated
+      replicas: 2
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+
+      #WORDPRESS_DB_USER: exampleuser #from wordpress guide
+      WORDPRESS_DB_USER: wordpress
+
+      #WORDPRESS_DB_PASSWORD: examplepass #from wordpress guide
+      WORDPRESS_DB_NAME: wordpress #from wordpress guide
+
+      WORDPRESS_DB_PASSWORD_FILE: /run/secrets/db_password
+    volumes:
+      - wordpress:/var/www/html
+    depends_on:
+      - db
+    secrets:
+      - db_password
+
+  #MySQL database storing
+  db:
+    image: mysql:latest
+    restart: always
+    environment:
+      MYSQL_DATABASE: wordpress #from secrets documentation
+
+      #MYSQL_USER: exampleuser
+      MYSQL_USER: wordpress #from secrets documentation
+
+      #MYSQL_PASSWORD: examplepass #from wordpress guide
+      MYSQL_RANDOM_ROOT_PASSWORD: '1'  #from wordpress guide
+
+      MYSQL_PASSWORD_FILE: /run/secrets/db_password #sends password to password file for secrets
+
+    volumes:
+      - /mnt/dbdata:/var/lib/mysql
+    secrets:
+      - db_root_password
+      - db_password
+
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - wordpress
+#secrets for password encryption
+secrets:
+  db_password:
+    file: db_password.txt
+  db_root_password:
+    file: db_root_password.txt
+
+volumes:
+  wordpress:
+  db_data:
+
+#links used:
+#wordpress guide: https://hub.docker.com/_/wordpress 
+#wordpress secrets: https://docs.docker.com/compose/how-tos/use-secrets/
